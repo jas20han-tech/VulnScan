@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VulnScan Report - {{ target.domain }}</title>
+<style>
+body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 40px; color: #1a1a1a; }
+h1 { color: #111; border-bottom: 3px solid #c0392b; padding-bottom: 8px; }
+h2 { color: #2c3e50; margin-top: 32px; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 14px; }
+th { background: #f5f5f5; }
+.sev-critical { color: #c0392b; font-weight: bold; }
+.sev-high { color: #e67e22; font-weight: bold; }
+.sev-medium { color: #f1c40f; }
+.sev-low { color: #2980b9; }
+.finding { border: 1px solid #e0e0e0; border-radius: 6px; padding: 14px 18px; margin: 14px 0; }
+pre { background: #f7f7f9; border: 1px solid #e1e1e8; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 13px; }
+code { font-family: SFMono-Regular, Consolas, monospace; }
+.consent { background: #eafaf1; border: 1px solid #a9dfbf; padding: 12px 16px; border-radius: 6px; }
+.meta { color: #555; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>VulnScan Security Report</h1>
+<p class="meta"><strong>Target:</strong> {{ target.domain }} ({{ target.base_url }}) &mdash; scan {{ scan.id[:8] }}</p>
+<p class="meta"><strong>Scan started:</strong> {{ scan.started_at }} | <strong>completed:</strong> {{ scan.completed_at or 'n/a' }}</p>
+
+<div class="consent">
+<strong>Consent record (proof of authorized testing):</strong><br>
+Confirmed at: {{ target.consent_confirmed_at }}<br>
+Phrase typed: <code>{{ target.consent_phrase_typed }}</code>
+</div>
+
+<h2>Executive Summary</h2>
+<table>
+<tr><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Total</th></tr>
+<tr>
+  <td class="sev-critical">{{ counts.critical }}</td>
+  <td class="sev-high">{{ counts.high }}</td>
+  <td class="sev-medium">{{ counts.medium }}</td>
+  <td class="sev-low">{{ counts.low }}</td>
+  <td>{{ counts.critical + counts.high + counts.medium + counts.low }}</td>
+</tr>
+</table>
+
+<h2>Findings</h2>
+{% if findings %}
+  {% for f in findings %}
+  <div class="finding">
+    <h3>[{{ f.severity|upper }}] {{ f.subtype }} <span class="meta">({{ f.module }})</span></h3>
+    <p class="meta"><strong>Route:</strong> {{ f.route }} {% if f.parameter %}| <strong>Parameter:</strong> {{ f.parameter }}{% endif %}</p>
+    <p class="meta"><strong>Reproducible:</strong> {{ 'yes' if f.reproducible else 'no' }}</p>
+    <h4>Evidence</h4>
+    <pre>{{ f.evidence | tojson(indent=2) }}</pre>
+    {% if fixes[f.id] %}
+    <h4>Suggested Fix</h4>
+    <p><strong>Model:</strong> {{ fixes[f.id].model_used }}</p>
+    <pre>{{ fixes[f.id].diff }}</pre>
+    <p>{{ fixes[f.id].explanation }}</p>
+    {% else %}
+    <p class="meta">(Fix generation unavailable for this finding.)</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <p>No findings in this scan.</p>
+{% endif %}
+
+<h2>Appendix &mdash; Crawl Coverage</h2>
+<p class="meta">Routes discovered: <strong>{{ coverage.route_count }}</strong></p>
+<ul>
+{% for r in coverage.routes %}<li>{{ r }}</li>{% endfor %}
+</ul>
+{% if scan.error_message %}<p class="meta">Note: {{ scan.error_message }}</p>{% endif %}
+
+</body>
+</html>
