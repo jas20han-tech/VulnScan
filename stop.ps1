@@ -23,13 +23,15 @@ function Stop-Svc($Name) {
         Remove-Item $pidFile -Force
     }
     # Safety net: kill whatever listens on the service port (including orphans).
-    $port = $Ports[$Name]
-    $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue |
-        Select-Object -ExpandProperty OwningProcess -Unique
-    foreach ($lp in $listener) {
-        if ($lp -and $lp -notin $stopped) {
-            Stop-Process -Id $lp -Force
-            $stopped += $lp
+    $portList = if ($Name -eq "frontend") { @(5173, 5174) } else { @($Ports[$Name]) }
+    foreach ($port in $portList) {
+        $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($lp in $listener) {
+            if ($lp -and $lp -notin $stopped) {
+                Stop-Process -Id $lp -Force -ErrorAction SilentlyContinue
+                $stopped += $lp
+            }
         }
     }
 
